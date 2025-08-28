@@ -1,183 +1,176 @@
 # main.py
 
 import os
-import google.generativeai as genai
 from dotenv import load_dotenv
+import google.generativeai as genai
 
 """
 ====================================================
-   KalviMentor_AI - Prompting Techniques Demo
+   KalviMentor_AI - Prompt Engineering & Evaluation
 ====================================================
 
-This script demonstrates multiple prompting strategies:
-
+This file demonstrates:
 1. Zero-Shot Prompting
 2. One-Shot Prompting
 3. Multi-Shot Prompting
 4. Dynamic Prompting
-5. System + User Prompting (RTFC Framework)
-6. Chain-of-Thought Prompting
-
+5. Chain-of-Thought Prompting
+6. Evaluation Pipeline with Judge Prompt
 ====================================================
 """
 
-# Load API key from .env file
+# Load API Key
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Initialize Gemini model
+# Initialize Gemini Model
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# --------------------------------------------------
-# 1. Zero-Shot Prompting
-# --------------------------------------------------
+
+# ==================================================
+# 1. Zero-Shot Prompt
+# ==================================================
 zero_shot_prompt = """
 You are KalviMentor_AI, a friendly educational mentor.
 A student asks: "Explain Newton’s Second Law of Motion in simple terms."
 Provide a clear, structured, and student-friendly answer.
 """
 
-# --------------------------------------------------
-# 2. One-Shot Prompting
-# --------------------------------------------------
+zero_shot_response = model.generate_content(zero_shot_prompt)
+
+
+# ==================================================
+# 2. One-Shot Prompt
+# ==================================================
 one_shot_prompt = """
 You are KalviMentor_AI, a friendly educational mentor.
-
 Example:
-Q: Explain Photosynthesis in simple terms.
-A:
-1. Concept Explanation: Photosynthesis is the process by which plants make food using sunlight, water, and carbon dioxide.
-2. Example or Analogy: Think of it like a kitchen – sunlight is the stove, water and CO2 are ingredients, and sugar is the cooked food.
-3. Practice Question: Why is sunlight important for photosynthesis?
-4. Feedback/Tips: Don’t forget that plants release oxygen too.
+Q: What is Photosynthesis?
+A: Photosynthesis is how plants make food using sunlight, water, and carbon dioxide.
+They turn these into glucose (sugar) for energy and release oxygen.
 
----
-
-Now, the student asks:
-Q: Explain Cellular Respiration in simple terms.
+Now, answer the student’s question:
+Q: Explain the process of Evaporation.
 """
 
-# --------------------------------------------------
-# 3. Multi-Shot Prompting
-# --------------------------------------------------
+one_shot_response = model.generate_content(one_shot_prompt)
+
+
+# ==================================================
+# 3. Multi-Shot Prompt
+# ==================================================
 multi_shot_prompt = """
 You are KalviMentor_AI, a friendly educational mentor.
+Here are examples:
 
-Example 1:
-Q: Explain Photosynthesis in simple terms.
-A:
-1. Concept Explanation: Plants make food using sunlight, water, and CO2.
-2. Example or Analogy: Like a kitchen cooking sugar.
-3. Practice Question: Why is sunlight important for photosynthesis?
-4. Feedback/Tips: Remember plants release oxygen.
+Q: What is gravity?
+A: Gravity is the force that pulls objects toward each other, like how Earth pulls us down.
 
----
+Q: What is friction?
+A: Friction is a force that happens when two surfaces rub against each other, slowing things down.
 
-Example 2:
-Q: Explain Newton’s Second Law in simple terms.
-A:
-1. Concept Explanation: Force = Mass × Acceleration.
-2. Example or Analogy: Pushing a heavy cart vs a light cart.
-3. Practice Question: If the same force is applied, which accelerates more?
-4. Feedback/Tips: Link it to daily life.
-
----
-
-Now, the student asks:
-Q: Explain Plate Tectonics in simple terms.
+Now, answer the student’s question:
+Q: Explain Electricity in simple terms.
 """
 
-# --------------------------------------------------
+multi_shot_response = model.generate_content(multi_shot_prompt)
+
+
+# ==================================================
 # 4. Dynamic Prompting
-# --------------------------------------------------
-student_level = "Beginner"   # could be Beginner, Intermediate, Advanced
-topic = "Artificial Intelligence"
+# ==================================================
+student_level = "beginner"  # can be beginner, intermediate, advanced
+student_topic = "Black Holes"
 
 dynamic_prompt = f"""
 You are KalviMentor_AI, a friendly educational mentor.
-
-The student is at a **{student_level}** level.
-
-Your task is to explain the topic: "{topic}".
-
-Instructions:
-- Adapt explanation to the student’s level.
-- If Beginner → use simple words and analogies.
-- If Intermediate → give real-world examples.
-- If Advanced → provide in-depth details.
-Always include:
-1. Concept Explanation
-2. Example or Analogy
-3. Practice Question
-4. Feedback/Tips
+The student is at a {student_level} level.
+Explain the topic: {student_topic}.
+Keep the explanation tailored to their level.
 """
 
-# --------------------------------------------------
-# 5. System + User Prompt (RTFC Framework)
-# --------------------------------------------------
-system_prompt = """
-[Role]
-You are KalviMentor_AI, a friendly and knowledgeable educational mentor.
+dynamic_response = model.generate_content(dynamic_prompt)
 
-[Task]
-Guide students by explaining concepts, generating practice questions,
-evaluating answers, and providing constructive feedback.
 
-[Format]
-Always respond in a clear, structured way:
-1. Concept Explanation
-2. Example or Analogy
-3. Practice Question
-4. Feedback/Tips
+# ==================================================
+# 5. Chain-of-Thought Prompting
+# ==================================================
+chain_of_thought_prompt = """
+You are KalviMentor_AI, a friendly mentor.
+A student asks: "Solve 12 + 28 × 2"
 
-[Constraints]
-- Keep tone encouraging and student-friendly.
-- Avoid jargon unless necessary.
-- Use step-by-step reasoning.
+Think step by step:
+1. Recall order of operations (BODMAS).
+2. First, multiply 28 × 2.
+3. Then, add 12 to the result.
+4. Show reasoning clearly and provide the final answer.
 """
 
-user_prompt = """
-A student asks: "Can you explain the difference between mitosis and meiosis in simple terms?"
+chain_of_thought_response = model.generate_content(chain_of_thought_prompt)
+
+
+# ==================================================
+# 6. Evaluation Pipeline
+# ==================================================
+
+# --- Dataset (5 samples) ---
+dataset = [
+    {"query": "What is gravity?", "expected_answer": "Gravity is the force that pulls objects toward each other."},
+    {"query": "What is evaporation?", "expected_answer": "Evaporation is when liquid water changes into water vapor."},
+    {"query": "What is photosynthesis?", "expected_answer": "Photosynthesis is how plants make food using sunlight, water, and carbon dioxide."},
+    {"query": "Solve 5 + 3 × 2", "expected_answer": "11"},
+    {"query": "What is friction?", "expected_answer": "Friction is the force that slows motion when two surfaces rub together."}
+]
+
+# --- Judge Prompt Template ---
+def judge_response(query, expected, actual):
+    judge_prompt = f"""
+You are KalviMentor_AI Judge.
+Evaluate the model’s response compared to the expected answer.
+
+Student Query: {query}
+Expected Answer: {expected}
+Model Answer: {actual}
+
+Judge the answer on:
+1. Correctness (Is it factually correct?)
+2. Clarity (Is it understandable for a student?)
+3. Relevance (Does it answer the query?)
+
+Give a short evaluation and a score between 1 (poor) to 5 (excellent).
 """
+    return model.generate_content(judge_prompt).text
 
-rtfc_prompt = f"{system_prompt}\n\n{user_prompt}"
+# --- Run Evaluation ---
+def run_evaluation():
+    print("\n================= Evaluation Pipeline =================\n")
+    for i, sample in enumerate(dataset, 1):
+        # Get model response
+        query = sample["query"]
+        expected = sample["expected_answer"]
+        actual_response = model.generate_content(query).text
 
-# --------------------------------------------------
-# 6. Chain-of-Thought Prompting
-# --------------------------------------------------
-cot_prompt = """
-You are KalviMentor_AI, a mentor who explains reasoning step by step.
+        # Judge the response
+        evaluation = judge_response(query, expected, actual_response)
 
-Question:
-A car accelerates from rest to 20 m/s in 5 seconds. 
-Its mass is 1000 kg. What force is applied?
+        # Print results
+        print(f"Test Case {i}")
+        print(f"Query: {query}")
+        print(f"Expected: {expected}")
+        print(f"Model: {actual_response}")
+        print(f"Evaluation: {evaluation}")
+        print("-------------------------------------------------------")
 
-Answer format:
-1. Step-by-step reasoning: Show how to calculate acceleration, then use F = m × a.
-2. Final Answer: Provide the force in Newtons.
-"""
 
-# --------------------------------------------------
-# Mode Selector
-# --------------------------------------------------
-modes = {
-    "zero_shot": zero_shot_prompt,
-    "one_shot": one_shot_prompt,
-    "multi_shot": multi_shot_prompt,
-    "dynamic": dynamic_prompt,
-    "rtfc": rtfc_prompt,
-    "chain_of_thought": cot_prompt
-}
+# ==================================================
+# Run All Sections
+# ==================================================
+if __name__ == "__main__":
+    print("🔹 Zero-Shot Response:\n", zero_shot_response.text, "\n")
+    print("🔹 One-Shot Response:\n", one_shot_response.text, "\n")
+    print("🔹 Multi-Shot Response:\n", multi_shot_response.text, "\n")
+    print("🔹 Dynamic Response:\n", dynamic_response.text, "\n")
+    print("🔹 Chain-of-Thought Response:\n", chain_of_thought_response.text, "\n")
 
-# Choose the mode here (change this for testing)
-selected_mode = "chain_of_thought"   # options: zero_shot, one_shot, multi_shot, dynamic, rtfc, chain_of_thought
-
-# Run the selected prompt
-print(f"\n🔹 Running Mode: {selected_mode.upper()}\n")
-response = model.generate_content(modes[selected_mode])
-
-# Print prompts & output
-print("🔹 Prompt Sent:\n")
-print(modes[selected_mode].strip())
-print("\n🔹 AI Response:\n")
-print(response.text)
+    # Run Evaluation
+    run_evaluation()
