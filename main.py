@@ -17,7 +17,24 @@ This file demonstrates:
 5. Chain-of-Thought Prompting
 6. Evaluation Pipeline with Judge Prompt
 7. Token Logging
-8. Temperature Control (creativity vs. determinism)
+8. Temperature Control
+9. Top-P (Nucleus Sampling) Control
+
+====================================================
+
+🔹 Tokens:
+- Tokens are chunks of text (words/subwords).
+- Models process text in tokens. More tokens = more cost & time.
+
+🔹 Temperature:
+- Controls creativity/randomness.
+- Low (0.2) → focused, deterministic.
+- High (0.8) → creative, diverse.
+
+🔹 Top-P (Nucleus Sampling):
+- Chooses from top tokens whose cumulative probability ≥ P.
+- Low (0.5) → safe, predictable.
+- High (0.9) → diverse, creative.
 
 ====================================================
 """
@@ -26,11 +43,11 @@ This file demonstrates:
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Initialize Gemini Model with Temperature
+# Initialize Gemini Model with Temperature + Top P
 generation_config = {
-    "temperature": 0.7,  # <-- adjust this value (0.0 to 1.0)
+    "temperature": 0.7,   # creativity control
     "max_output_tokens": 500,
-    "top_p": 0.9,
+    "top_p": 0.85,        # nucleus sampling
     "top_k": 40
 }
 model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
@@ -42,8 +59,7 @@ model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_c
 def generate_with_logging(prompt):
     """Generate model output and log token usage."""
     response = model.generate_content(prompt)
-    
-    # Token usage metadata
+
     if hasattr(response, "usage_metadata") and response.usage_metadata:
         usage = response.usage_metadata
         print(f"🔹 Tokens Used - Prompt: {usage.prompt_token_count}, "
@@ -56,122 +72,123 @@ def generate_with_logging(prompt):
 
 
 # ==================================================
-# Prompt Examples (Zero-shot, One-shot, Multi-shot, etc.)
+# Prompting Examples
 # ==================================================
-zero_shot_prompt = """
-You are KalviMentor_AI, a friendly educational mentor.
-A student asks: "Explain Newton’s Second Law of Motion in simple terms."
-Provide a clear, structured, and student-friendly answer.
-"""
-zero_shot_response = generate_with_logging(zero_shot_prompt)
 
-one_shot_prompt = """
-You are KalviMentor_AI, a friendly educational mentor.
-Example:
-Q: What is Photosynthesis?
-A: Photosynthesis is how plants make food using sunlight, water, and carbon dioxide.
+def zero_shot():
+    prompt = """
+    You are KalviMentor_AI, a friendly mentor.
+    Explain Newton’s Second Law of Motion in simple terms.
+    """
+    return generate_with_logging(prompt)
 
-Now, answer the student’s question:
-Q: Explain the process of Evaporation.
-"""
-one_shot_response = generate_with_logging(one_shot_prompt)
 
-multi_shot_prompt = """
-You are KalviMentor_AI, a friendly educational mentor.
-Here are examples:
+def one_shot():
+    prompt = """
+    You are KalviMentor_AI, a friendly mentor.
 
-Q: What is gravity?
-A: Gravity is the force that pulls objects toward each other, like how Earth pulls us down.
+    Example Q&A:
+    Q: What is photosynthesis?
+    A: Photosynthesis is the process by which green plants use sunlight to make food from carbon dioxide and water.
 
-Q: What is friction?
-A: Friction is a force that happens when two surfaces rub against each other, slowing things down.
+    Now answer this:
+    Q: What is gravity?
+    """
+    return generate_with_logging(prompt)
 
-Now, answer the student’s question:
-Q: Explain Electricity in simple terms.
-"""
-multi_shot_response = generate_with_logging(multi_shot_prompt)
 
-student_level = "beginner"
-student_topic = "Black Holes"
-dynamic_prompt = f"""
-You are KalviMentor_AI, a friendly educational mentor.
-The student is at a {student_level} level.
-Explain the topic: {student_topic}.
-Keep the explanation tailored to their level.
-"""
-dynamic_response = generate_with_logging(dynamic_prompt)
+def multi_shot():
+    prompt = """
+    You are KalviMentor_AI, a friendly mentor.
 
-chain_of_thought_prompt = """
-You are KalviMentor_AI, a friendly mentor.
-A student asks: "Solve 12 + 28 × 2"
+    Example 1:
+    Q: What is the capital of France?
+    A: Paris.
 
-Think step by step:
-1. Recall order of operations (BODMAS).
-2. First, multiply 28 × 2.
-3. Then, add 12 to the result.
-4. Show reasoning clearly and provide the final answer.
-"""
-chain_of_thought_response = generate_with_logging(chain_of_thought_prompt)
+    Example 2:
+    Q: What is the square root of 16?
+    A: 4.
+
+    Now answer this:
+    Q: Who wrote 'Romeo and Juliet'?
+    """
+    return generate_with_logging(prompt)
+
+
+def dynamic_prompt(student_name="Mahil", subject="Python"):
+    prompt = f"""
+    You are KalviMentor_AI, helping a student named {student_name}.
+    The student asks: "Can you explain {subject} in simple terms?"
+    Provide a friendly, structured answer.
+    """
+    return generate_with_logging(prompt)
+
+
+def chain_of_thought():
+    prompt = """
+    You are KalviMentor_AI, a reasoning assistant.
+    A student asks: "If a car travels at 60 km/h for 2 hours, how far does it go?"
+
+    Let's reason step by step (do not show reasoning, only final answer):
+    """
+    return generate_with_logging(prompt)
 
 
 # ==================================================
 # Evaluation Pipeline
 # ==================================================
+
 dataset = [
-    {"query": "What is gravity?", "expected_answer": "Gravity is the force that pulls objects toward each other."},
-    {"query": "What is evaporation?", "expected_answer": "Evaporation is when liquid water changes into water vapor."},
-    {"query": "What is photosynthesis?", "expected_answer": "Photosynthesis is how plants make food using sunlight, water, and carbon dioxide."},
-    {"query": "Solve 5 + 3 × 2", "expected_answer": "11"},
-    {"query": "What is friction?", "expected_answer": "Friction is the force that slows motion when two surfaces rub together."}
+    {"input": "What is 2+2?", "expected": "4"},
+    {"input": "Capital of India?", "expected": "New Delhi"},
+    {"input": "Who wrote Hamlet?", "expected": "William Shakespeare"},
+    {"input": "Square root of 81?", "expected": "9"},
+    {"input": "Chemical symbol of water?", "expected": "H2O"},
 ]
 
-def judge_response(query, expected, actual):
-    judge_prompt = f"""
-You are KalviMentor_AI Judge.
-Evaluate the model’s response compared to the expected answer.
+def evaluate_model():
+    print("\n🔹 Running Evaluation Pipeline...\n")
+    results = []
+    for sample in dataset:
+        user_prompt = f"You are KalviMentor_AI. Answer clearly: {sample['input']}"
+        response = generate_with_logging(user_prompt)
 
-Student Query: {query}
-Expected Answer: {expected}
-Model Answer: {actual}
+        judge_prompt = f"""
+        You are a strict evaluator.
+        Compare the model's answer with the expected answer.
+        Question: {sample['input']}
+        Model Answer: {response.text}
+        Expected Answer: {sample['expected']}
+        Does the model's answer match the expected one? Reply with Yes or No.
+        """
+        judge_response = model.generate_content(judge_prompt)
+        verdict = judge_response.text.strip()
+        results.append({"input": sample["input"], "model_answer": response.text, "expected": sample["expected"], "verdict": verdict})
 
-Judge the answer on:
-1. Correctness (Is it factually correct?)
-2. Clarity (Is it understandable for a student?)
-3. Relevance (Does it answer the query?)
-
-Give a short evaluation and a score between 1 (poor) to 5 (excellent).
-"""
-    return generate_with_logging(judge_prompt).text
-
-def run_evaluation():
-    print("\n================= Evaluation Pipeline =================\n")
-    for i, sample in enumerate(dataset, 1):
-        query = sample["query"]
-        expected = sample["expected_answer"]
-        
-        # Model response
-        actual_response = generate_with_logging(query).text
-        
-        # Judge evaluation
-        evaluation = judge_response(query, expected, actual_response)
-        
-        print(f"Test Case {i}")
-        print(f"Query: {query}")
-        print(f"Expected: {expected}")
-        print(f"Model: {actual_response}")
-        print(f"Evaluation: {evaluation}")
-        print("-------------------------------------------------------")
+    print("✅ Evaluation Results:")
+    for r in results:
+        print(r)
 
 
 # ==================================================
-# Run All Sections
+# Run All Demonstrations
 # ==================================================
+
 if __name__ == "__main__":
-    print("🔹 Zero-Shot Response:\n", zero_shot_response.text, "\n")
-    print("🔹 One-Shot Response:\n", one_shot_response.text, "\n")
-    print("🔹 Multi-Shot Response:\n", multi_shot_response.text, "\n")
-    print("🔹 Dynamic Response:\n", dynamic_response.text, "\n")
-    print("🔹 Chain-of-Thought Response:\n", chain_of_thought_response.text, "\n")
-    
-    # Run Evaluation Pipeline
-    run_evaluation()
+    print("\n========== ZERO SHOT ==========")
+    print(zero_shot().text)
+
+    print("\n========== ONE SHOT ==========")
+    print(one_shot().text)
+
+    print("\n========== MULTI SHOT ==========")
+    print(multi_shot().text)
+
+    print("\n========== DYNAMIC PROMPT ==========")
+    print(dynamic_prompt(student_name="Ananya", subject="Machine Learning").text)
+
+    print("\n========== CHAIN OF THOUGHT ==========")
+    print(chain_of_thought().text)
+
+    print("\n========== EVALUATION ==========")
+    evaluate_model()
