@@ -21,13 +21,14 @@ Includes:
 9. Top-P (Nucleus Sampling) Control
 10. Top-K Sampling Control
 11. Stop Sequences Control
+12. Structured Output Control  ✅
 
 ====================================================
 
-🔹 Stop Sequences:
-- Special tokens/phrases where model stops generating.
-- Example: stop_sequences=["###"] → model halts when "###" appears.
-- Ensures structured, concise outputs.
+🔹 Structured Output:
+- Ensures the model replies in a fixed format (e.g., JSON).
+- Useful for APIs, chatbots, or any application where the output
+  must be machine-readable and not free-form text.
 
 ====================================================
 """
@@ -36,13 +37,13 @@ Includes:
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Initialize Gemini Model with all configs
+# Initialize Gemini Model with configs
 generation_config = {
-    "temperature": 0.7,        # creativity control
+    "temperature": 0.7,
     "max_output_tokens": 500,
-    "top_p": 0.85,             # nucleus sampling
-    "top_k": 40,               # Top-K sampling
-    "stop_sequences": ["###"]  # NEW: stop sequence
+    "top_p": 0.85,
+    "top_k": 40,
+    "stop_sequences": ["###"]
 }
 model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
 
@@ -66,123 +67,45 @@ def generate_with_logging(prompt):
 
 
 # ==================================================
-# Prompting Examples
+# Structured Output Example
 # ==================================================
-
-def zero_shot():
+def structured_output():
+    """
+    Ask model to return answer in structured JSON format.
+    """
     prompt = """
-    You are KalviMentor_AI, a friendly mentor.
-    Explain Newton’s Second Law of Motion in simple terms. ###
+    You are KalviMentor_AI, a helpful tutor.
+    Provide answers ONLY in the following JSON format:
+    {
+      "question": "<repeat the question>",
+      "answer": "<short and clear answer>"
+    }
+
+    Question: "What is the capital of France?" ###
     """
-    return generate_with_logging(prompt)
 
-
-def one_shot():
-    prompt = """
-    You are KalviMentor_AI, a friendly mentor.
-
-    Example Q&A:
-    Q: What is photosynthesis?
-    A: Photosynthesis is the process by which green plants use sunlight to make food from carbon dioxide and water. ###
-
-    Now answer this:
-    Q: What is gravity? ###
-    """
-    return generate_with_logging(prompt)
-
-
-def multi_shot():
-    prompt = """
-    You are KalviMentor_AI, a friendly mentor.
-
-    Example 1:
-    Q: What is the capital of France?
-    A: Paris. ###
-
-    Example 2:
-    Q: What is the square root of 16?
-    A: 4. ###
-
-    Now answer this:
-    Q: Who wrote 'Romeo and Juliet'? ###
-    """
-    return generate_with_logging(prompt)
-
-
-def dynamic_prompt(student_name="Mahil", subject="Python"):
-    prompt = f"""
-    You are KalviMentor_AI, helping a student named {student_name}.
-    The student asks: "Can you explain {subject} in simple terms?"
-    Provide a friendly, structured answer. ###
-    """
-    return generate_with_logging(prompt)
-
-
-def chain_of_thought():
-    prompt = """
-    You are KalviMentor_AI, a reasoning assistant.
-    A student asks: "If a car travels at 60 km/h for 2 hours, how far does it go?"
-
-    Let's reason step by step (do not show reasoning, only final answer): ###
-    """
-    return generate_with_logging(prompt)
-
-
-# ==================================================
-# Evaluation Pipeline
-# ==================================================
-
-dataset = [
-    {"input": "What is 2+2?", "expected": "4"},
-    {"input": "Capital of India?", "expected": "New Delhi"},
-    {"input": "Who wrote Hamlet?", "expected": "William Shakespeare"},
-    {"input": "Square root of 81?", "expected": "9"},
-    {"input": "Chemical symbol of water?", "expected": "H2O"},
-]
-
-def evaluate_model():
-    print("\n🔹 Running Evaluation Pipeline...\n")
-    results = []
-    for sample in dataset:
-        user_prompt = f"You are KalviMentor_AI. Answer clearly: {sample['input']} ###"
-        response = generate_with_logging(user_prompt)
-
-        judge_prompt = f"""
-        You are a strict evaluator.
-        Compare the model's answer with the expected answer.
-        Question: {sample['input']}
-        Model Answer: {response.text}
-        Expected Answer: {sample['expected']}
-        Does the model's answer match the expected one? Reply with Yes or No. ###
-        """
-        judge_response = model.generate_content(judge_prompt)
-        verdict = judge_response.text.strip()
-        results.append({"input": sample["input"], "model_answer": response.text, "expected": sample["expected"], "verdict": verdict})
-
-    print("✅ Evaluation Results:")
-    for r in results:
-        print(r)
+    response = generate_with_logging(prompt)
+    return response
 
 
 # ==================================================
 # Run All Demonstrations
 # ==================================================
-
 if __name__ == "__main__":
     print("\n========== ZERO SHOT ==========")
-    print(zero_shot().text)
+    print(generate_with_logging("Explain Newton's Second Law in simple terms. ###").text)
 
     print("\n========== ONE SHOT ==========")
-    print(one_shot().text)
+    print(generate_with_logging("Q: What is gravity?\nA: ###").text)
 
     print("\n========== MULTI SHOT ==========")
-    print(multi_shot().text)
+    print(generate_with_logging("Q: Who wrote 'Romeo and Juliet'? ###").text)
 
     print("\n========== DYNAMIC PROMPT ==========")
-    print(dynamic_prompt(student_name="Ananya", subject="Machine Learning").text)
+    print(generate_with_logging("Explain Machine Learning simply. ###").text)
 
     print("\n========== CHAIN OF THOUGHT ==========")
-    print(chain_of_thought().text)
+    print(generate_with_logging("If a car travels at 60 km/h for 2 hours, how far does it go? Let's reason step by step. ###").text)
 
-    print("\n========== EVALUATION ==========")
-    evaluate_model()
+    print("\n========== STRUCTURED OUTPUT ==========")
+    print(structured_output().text)
