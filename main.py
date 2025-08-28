@@ -16,7 +16,9 @@ This file demonstrates:
 4. Dynamic Prompting
 5. Chain-of-Thought Prompting
 6. Evaluation Pipeline with Judge Prompt
-7. Token Logging (count tokens used per call)
+7. Token Logging
+8. Temperature Control (creativity vs. determinism)
+
 ====================================================
 """
 
@@ -24,8 +26,14 @@ This file demonstrates:
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Initialize Gemini Model
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Initialize Gemini Model with Temperature
+generation_config = {
+    "temperature": 0.7,  # <-- adjust this value (0.0 to 1.0)
+    "max_output_tokens": 500,
+    "top_p": 0.9,
+    "top_k": 40
+}
+model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
 
 
 # ==================================================
@@ -48,7 +56,7 @@ def generate_with_logging(prompt):
 
 
 # ==================================================
-# 1. Zero-Shot Prompt
+# Prompt Examples (Zero-shot, One-shot, Multi-shot, etc.)
 # ==================================================
 zero_shot_prompt = """
 You are KalviMentor_AI, a friendly educational mentor.
@@ -57,26 +65,17 @@ Provide a clear, structured, and student-friendly answer.
 """
 zero_shot_response = generate_with_logging(zero_shot_prompt)
 
-
-# ==================================================
-# 2. One-Shot Prompt
-# ==================================================
 one_shot_prompt = """
 You are KalviMentor_AI, a friendly educational mentor.
 Example:
 Q: What is Photosynthesis?
 A: Photosynthesis is how plants make food using sunlight, water, and carbon dioxide.
-They turn these into glucose (sugar) for energy and release oxygen.
 
 Now, answer the student’s question:
 Q: Explain the process of Evaporation.
 """
 one_shot_response = generate_with_logging(one_shot_prompt)
 
-
-# ==================================================
-# 3. Multi-Shot Prompt
-# ==================================================
 multi_shot_prompt = """
 You are KalviMentor_AI, a friendly educational mentor.
 Here are examples:
@@ -92,13 +91,8 @@ Q: Explain Electricity in simple terms.
 """
 multi_shot_response = generate_with_logging(multi_shot_prompt)
 
-
-# ==================================================
-# 4. Dynamic Prompting
-# ==================================================
-student_level = "beginner"  # can be beginner, intermediate, advanced
+student_level = "beginner"
 student_topic = "Black Holes"
-
 dynamic_prompt = f"""
 You are KalviMentor_AI, a friendly educational mentor.
 The student is at a {student_level} level.
@@ -107,10 +101,6 @@ Keep the explanation tailored to their level.
 """
 dynamic_response = generate_with_logging(dynamic_prompt)
 
-
-# ==================================================
-# 5. Chain-of-Thought Prompting
-# ==================================================
 chain_of_thought_prompt = """
 You are KalviMentor_AI, a friendly mentor.
 A student asks: "Solve 12 + 28 × 2"
@@ -125,7 +115,7 @@ chain_of_thought_response = generate_with_logging(chain_of_thought_prompt)
 
 
 # ==================================================
-# 6. Evaluation Pipeline
+# Evaluation Pipeline
 # ==================================================
 dataset = [
     {"query": "What is gravity?", "expected_answer": "Gravity is the force that pulls objects toward each other."},
