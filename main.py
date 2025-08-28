@@ -146,16 +146,15 @@ rtfc_prompt = f"{system_prompt}\n\n{user_prompt}"
 # 6. Chain-of-Thought Prompting
 # --------------------------------------------------
 cot_prompt = """
-You are KalviMentor_AI, a mentor who thinks step by step.
+You are KalviMentor_AI, a mentor who explains reasoning step by step.
 
-Question: A car accelerates from rest to 20 m/s in 5 seconds. 
+Question:
+A car accelerates from rest to 20 m/s in 5 seconds. 
 Its mass is 1000 kg. What force is applied?
 
 Answer format:
-1. Step-by-step reasoning (hidden thinking steps).
-2. Final Answer clearly.
-
-Now solve the problem.
+1. Step-by-step reasoning: Show how to calculate acceleration, then use F = m × a.
+2. Final Answer: Provide the force in Newtons.
 """
 
 # --------------------------------------------------
@@ -171,7 +170,7 @@ modes = {
 }
 
 # Choose the mode here (change this for testing)
-selected_mode = "multi_shot"   # options: zero_shot, one_shot, multi_shot, dynamic, rtfc, chain_of_thought
+selected_mode = "chain_of_thought"   # options: zero_shot, one_shot, multi_shot, dynamic, rtfc, chain_of_thought
 
 # Run the selected prompt
 print(f"\n🔹 Running Mode: {selected_mode.upper()}\n")
