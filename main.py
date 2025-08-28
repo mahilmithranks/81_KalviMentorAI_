@@ -9,7 +9,7 @@ import google.generativeai as genai
    KalviMentor_AI - Prompt Engineering & Evaluation
 ====================================================
 
-This file demonstrates:
+Includes:
 1. Zero-Shot Prompting
 2. One-Shot Prompting
 3. Multi-Shot Prompting
@@ -19,22 +19,14 @@ This file demonstrates:
 7. Token Logging
 8. Temperature Control
 9. Top-P (Nucleus Sampling) Control
+10. Top-K Sampling Control
 
 ====================================================
 
-🔹 Tokens:
-- Tokens are chunks of text (words/subwords).
-- Models process text in tokens. More tokens = more cost & time.
-
-🔹 Temperature:
-- Controls creativity/randomness.
-- Low (0.2) → focused, deterministic.
-- High (0.8) → creative, diverse.
-
-🔹 Top-P (Nucleus Sampling):
-- Chooses from top tokens whose cumulative probability ≥ P.
-- Low (0.5) → safe, predictable.
-- High (0.9) → diverse, creative.
+🔹 Top-K (Sampling):
+- Restricts model to consider only the top-K most probable tokens.
+- K=1 → deterministic (always picks the highest probability token).
+- Larger K → more diverse outputs.
 
 ====================================================
 """
@@ -43,12 +35,12 @@ This file demonstrates:
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Initialize Gemini Model with Temperature + Top P
+# Initialize Gemini Model with Temperature + Top P + Top K
 generation_config = {
     "temperature": 0.7,   # creativity control
     "max_output_tokens": 500,
     "top_p": 0.85,        # nucleus sampling
-    "top_k": 40
+    "top_k": 40           # Top-K sampling (NEWLY ADDED)
 }
 model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
 
