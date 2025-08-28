@@ -16,6 +16,7 @@ This file demonstrates:
 4. Dynamic Prompting
 5. Chain-of-Thought Prompting
 6. Evaluation Pipeline with Judge Prompt
+7. Token Logging (count tokens used per call)
 ====================================================
 """
 
@@ -28,6 +29,25 @@ model = genai.GenerativeModel("gemini-1.5-flash")
 
 
 # ==================================================
+# Utility: Generate with token logging
+# ==================================================
+def generate_with_logging(prompt):
+    """Generate model output and log token usage."""
+    response = model.generate_content(prompt)
+    
+    # Token usage metadata
+    if hasattr(response, "usage_metadata") and response.usage_metadata:
+        usage = response.usage_metadata
+        print(f"🔹 Tokens Used - Prompt: {usage.prompt_token_count}, "
+              f"Candidates: {usage.candidates_token_count}, "
+              f"Total: {usage.total_token_count}\n")
+    else:
+        print("⚠️ Token usage metadata not available.\n")
+
+    return response
+
+
+# ==================================================
 # 1. Zero-Shot Prompt
 # ==================================================
 zero_shot_prompt = """
@@ -35,8 +55,7 @@ You are KalviMentor_AI, a friendly educational mentor.
 A student asks: "Explain Newton’s Second Law of Motion in simple terms."
 Provide a clear, structured, and student-friendly answer.
 """
-
-zero_shot_response = model.generate_content(zero_shot_prompt)
+zero_shot_response = generate_with_logging(zero_shot_prompt)
 
 
 # ==================================================
@@ -52,8 +71,7 @@ They turn these into glucose (sugar) for energy and release oxygen.
 Now, answer the student’s question:
 Q: Explain the process of Evaporation.
 """
-
-one_shot_response = model.generate_content(one_shot_prompt)
+one_shot_response = generate_with_logging(one_shot_prompt)
 
 
 # ==================================================
@@ -72,8 +90,7 @@ A: Friction is a force that happens when two surfaces rub against each other, sl
 Now, answer the student’s question:
 Q: Explain Electricity in simple terms.
 """
-
-multi_shot_response = model.generate_content(multi_shot_prompt)
+multi_shot_response = generate_with_logging(multi_shot_prompt)
 
 
 # ==================================================
@@ -88,8 +105,7 @@ The student is at a {student_level} level.
 Explain the topic: {student_topic}.
 Keep the explanation tailored to their level.
 """
-
-dynamic_response = model.generate_content(dynamic_prompt)
+dynamic_response = generate_with_logging(dynamic_prompt)
 
 
 # ==================================================
@@ -105,15 +121,12 @@ Think step by step:
 3. Then, add 12 to the result.
 4. Show reasoning clearly and provide the final answer.
 """
-
-chain_of_thought_response = model.generate_content(chain_of_thought_prompt)
+chain_of_thought_response = generate_with_logging(chain_of_thought_prompt)
 
 
 # ==================================================
 # 6. Evaluation Pipeline
 # ==================================================
-
-# --- Dataset (5 samples) ---
 dataset = [
     {"query": "What is gravity?", "expected_answer": "Gravity is the force that pulls objects toward each other."},
     {"query": "What is evaporation?", "expected_answer": "Evaporation is when liquid water changes into water vapor."},
@@ -122,7 +135,6 @@ dataset = [
     {"query": "What is friction?", "expected_answer": "Friction is the force that slows motion when two surfaces rub together."}
 ]
 
-# --- Judge Prompt Template ---
 def judge_response(query, expected, actual):
     judge_prompt = f"""
 You are KalviMentor_AI Judge.
@@ -139,21 +151,20 @@ Judge the answer on:
 
 Give a short evaluation and a score between 1 (poor) to 5 (excellent).
 """
-    return model.generate_content(judge_prompt).text
+    return generate_with_logging(judge_prompt).text
 
-# --- Run Evaluation ---
 def run_evaluation():
     print("\n================= Evaluation Pipeline =================\n")
     for i, sample in enumerate(dataset, 1):
-        # Get model response
         query = sample["query"]
         expected = sample["expected_answer"]
-        actual_response = model.generate_content(query).text
-
-        # Judge the response
+        
+        # Model response
+        actual_response = generate_with_logging(query).text
+        
+        # Judge evaluation
         evaluation = judge_response(query, expected, actual_response)
-
-        # Print results
+        
         print(f"Test Case {i}")
         print(f"Query: {query}")
         print(f"Expected: {expected}")
@@ -171,6 +182,6 @@ if __name__ == "__main__":
     print("🔹 Multi-Shot Response:\n", multi_shot_response.text, "\n")
     print("🔹 Dynamic Response:\n", dynamic_response.text, "\n")
     print("🔹 Chain-of-Thought Response:\n", chain_of_thought_response.text, "\n")
-
-    # Run Evaluation
+    
+    # Run Evaluation Pipeline
     run_evaluation()
