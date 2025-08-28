@@ -20,13 +20,14 @@ Includes:
 8. Temperature Control
 9. Top-P (Nucleus Sampling) Control
 10. Top-K Sampling Control
+11. Stop Sequences Control
 
 ====================================================
 
-🔹 Top-K (Sampling):
-- Restricts model to consider only the top-K most probable tokens.
-- K=1 → deterministic (always picks the highest probability token).
-- Larger K → more diverse outputs.
+🔹 Stop Sequences:
+- Special tokens/phrases where model stops generating.
+- Example: stop_sequences=["###"] → model halts when "###" appears.
+- Ensures structured, concise outputs.
 
 ====================================================
 """
@@ -35,12 +36,13 @@ Includes:
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Initialize Gemini Model with Temperature + Top P + Top K
+# Initialize Gemini Model with all configs
 generation_config = {
-    "temperature": 0.7,   # creativity control
+    "temperature": 0.7,        # creativity control
     "max_output_tokens": 500,
-    "top_p": 0.85,        # nucleus sampling
-    "top_k": 40           # Top-K sampling (NEWLY ADDED)
+    "top_p": 0.85,             # nucleus sampling
+    "top_k": 40,               # Top-K sampling
+    "stop_sequences": ["###"]  # NEW: stop sequence
 }
 model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
 
@@ -70,7 +72,7 @@ def generate_with_logging(prompt):
 def zero_shot():
     prompt = """
     You are KalviMentor_AI, a friendly mentor.
-    Explain Newton’s Second Law of Motion in simple terms.
+    Explain Newton’s Second Law of Motion in simple terms. ###
     """
     return generate_with_logging(prompt)
 
@@ -81,10 +83,10 @@ def one_shot():
 
     Example Q&A:
     Q: What is photosynthesis?
-    A: Photosynthesis is the process by which green plants use sunlight to make food from carbon dioxide and water.
+    A: Photosynthesis is the process by which green plants use sunlight to make food from carbon dioxide and water. ###
 
     Now answer this:
-    Q: What is gravity?
+    Q: What is gravity? ###
     """
     return generate_with_logging(prompt)
 
@@ -95,14 +97,14 @@ def multi_shot():
 
     Example 1:
     Q: What is the capital of France?
-    A: Paris.
+    A: Paris. ###
 
     Example 2:
     Q: What is the square root of 16?
-    A: 4.
+    A: 4. ###
 
     Now answer this:
-    Q: Who wrote 'Romeo and Juliet'?
+    Q: Who wrote 'Romeo and Juliet'? ###
     """
     return generate_with_logging(prompt)
 
@@ -111,7 +113,7 @@ def dynamic_prompt(student_name="Mahil", subject="Python"):
     prompt = f"""
     You are KalviMentor_AI, helping a student named {student_name}.
     The student asks: "Can you explain {subject} in simple terms?"
-    Provide a friendly, structured answer.
+    Provide a friendly, structured answer. ###
     """
     return generate_with_logging(prompt)
 
@@ -121,7 +123,7 @@ def chain_of_thought():
     You are KalviMentor_AI, a reasoning assistant.
     A student asks: "If a car travels at 60 km/h for 2 hours, how far does it go?"
 
-    Let's reason step by step (do not show reasoning, only final answer):
+    Let's reason step by step (do not show reasoning, only final answer): ###
     """
     return generate_with_logging(prompt)
 
@@ -142,7 +144,7 @@ def evaluate_model():
     print("\n🔹 Running Evaluation Pipeline...\n")
     results = []
     for sample in dataset:
-        user_prompt = f"You are KalviMentor_AI. Answer clearly: {sample['input']}"
+        user_prompt = f"You are KalviMentor_AI. Answer clearly: {sample['input']} ###"
         response = generate_with_logging(user_prompt)
 
         judge_prompt = f"""
@@ -151,7 +153,7 @@ def evaluate_model():
         Question: {sample['input']}
         Model Answer: {response.text}
         Expected Answer: {sample['expected']}
-        Does the model's answer match the expected one? Reply with Yes or No.
+        Does the model's answer match the expected one? Reply with Yes or No. ###
         """
         judge_response = model.generate_content(judge_prompt)
         verdict = judge_response.text.strip()
